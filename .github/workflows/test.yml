@@ -1,0 +1,59 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm test
+
+  end-to-end:
+    name: End-to-End
+    runs-on: ubuntu-latest
+    # do not run from forks, as forks don't have access to repository secrets
+    if: github.event.pull_request.head.repo.owner.login == github.event.pull_request.base.repo.owner.login
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      - uses: ./ # Uses the action in the root directory
+        id: test
+        with:
+          app-id: ${{ vars.TEST_APP_ID }}
+          private-key: ${{ secrets.TEST_APP_PRIVATE_KEY }}
+      - uses: octokit/request-action@02f5e7c637a73a3b12ed81015fa7fb5f11cc5d7d # v2.x
+        id: get-repository
+        env:
+          GITHUB_TOKEN: ${{ steps.test.outputs.token }}
+        with:
+          route: GET /installation/repositories
+      - name: Print repository data
+        env:
+          REPOSITORY_DATA: ${{ steps.get-repository.outputs.data }}
+        run: echo "$REPOSITORY_DATA"

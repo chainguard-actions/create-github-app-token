@@ -1,0 +1,27 @@
+name: Test missing app-id input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REPOSITORY: test-owner/test-repo
+      GITHUB_REPOSITORY_OWNER: test-owner
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action without app-id (expect failure)
+        id: action
+        uses: .
+        with:
+          private-key: "fake-private-key"
+        continue-on-error: true
+
+      - name: Assert action failed
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" != "failure" ]; then
+            echo "FAIL: expected action to fail when app-id is missing"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when app-id is missing"
