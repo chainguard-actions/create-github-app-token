@@ -1,0 +1,38 @@
+name: Test organization permission inputs (part 2)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with organization permission inputs (part 2)
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          client-id: "123456"
+          private-key: "not-a-valid-private-key"
+          permission-organization-plan: "read"
+          permission-organization-projects: "read"
+          permission-organization-secrets: "read"
+          permission-organization-self-hosted-runners: "read"
+          permission-organization-user-blocking: "read"
+          permission-packages: "read"
+          permission-pages: "read"
+          permission-profile: "write"
+          permission-pull-requests: "read"
+          permission-repository-custom-properties: "read"
+          permission-repository-hooks: "read"
+
+      - name: Assert action failed with invalid credentials
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with invalid private key, but outcome was '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action correctly failed with invalid private key"

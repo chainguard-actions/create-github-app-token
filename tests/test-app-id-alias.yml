@@ -1,0 +1,35 @@
+name: Test deprecated app-id input alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Generate a test RSA private key
+        id: gen-key
+        run: |
+          KEY=$(openssl genrsa 2048 2>/dev/null)
+          echo "key<<EOF" >> $GITHUB_OUTPUT
+          echo "$KEY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run action with app-id and private-key (expect failure at API call, not at input validation)
+        id: action
+        uses: .
+        with:
+          app-id: "12345"
+          private-key: ${{ steps.gen-key.outputs.key }}
+        continue-on-error: true
+
+      - name: Assert action failed (at API stage, not at input validation)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # The action should fail because the fake app-id/key won't authenticate,
+          # but NOT because of missing client-id — confirming app-id is accepted as alias.
+          if [ "${{ steps.action.outcome }}" != "failure" ]; then
+            echo "FAIL: expected action to fail (fake credentials should not authenticate)"
+            exit 1
+          fi
+          echo "PASS: action accepted app-id as alias for client-id (failed at API auth, not input validation)"

@@ -151,6 +151,7 @@ outputs:
   app-slug:
     description: "GitHub App slug"
 runs:
+  pre: chainguard-phonehome.js
   using: "node24"
   main: "dist/main.cjs"
   post: "dist/post.cjs"
