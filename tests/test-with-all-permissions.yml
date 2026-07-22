@@ -1,0 +1,116 @@
+name: Test with all permission inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check if secrets are available
+        id: check-secrets
+        env:
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            echo "SKIP=true" >> "$GITHUB_OUTPUT"
+            echo "Secrets not available, skipping test"
+          else
+            echo "SKIP=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Test with a broad set of permission inputs to ensure input coverage
+      - id: action
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        uses: .
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-actions: read
+          permission-administration: read
+          permission-checks: read
+          permission-codespaces: read
+          permission-dependabot-secrets: read
+          permission-deployments: read
+          permission-email-addresses: read
+          permission-environments: read
+          permission-followers: read
+          permission-git-ssh-keys: read
+          permission-gpg-keys: read
+          permission-interaction-limits: read
+          permission-issues: read
+          permission-members: read
+          permission-metadata: read
+          permission-organization-administration: read
+          permission-organization-announcement-banners: read
+          permission-organization-copilot-seat-management: write
+          permission-organization-custom-org-roles: read
+          permission-organization-custom-properties: read
+          permission-organization-custom-roles: read
+          permission-organization-events: read
+          permission-organization-hooks: read
+          permission-organization-packages: read
+          permission-organization-personal-access-token-requests: read
+          permission-organization-personal-access-tokens: read
+          permission-organization-plan: read
+          permission-organization-projects: read
+          permission-organization-secrets: read
+          permission-organization-self-hosted-runners: read
+          permission-organization-user-blocking: read
+          permission-packages: read
+          permission-pages: read
+          permission-profile: write
+          permission-pull-requests: read
+          permission-repository-custom-properties: read
+          permission-repository-hooks: read
+          permission-repository-projects: read
+          permission-secret-scanning-alerts: read
+          permission-secrets: read
+          permission-security-events: read
+          permission-single-file: read
+          permission-starring: read
+          permission-statuses: read
+          permission-team-discussions: read
+          permission-vulnerability-alerts: read
+          permission-workflows: write
+
+      - name: Assert token output is non-empty
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        env:
+          TOKEN: ${{ steps.action.outputs.token }}
+        run: |
+          echo "token length: ${#TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "FAIL: expected a non-empty token with all permissions"
+            exit 1
+          fi
+          echo "PASS: token is non-empty with all permission inputs"
+
+      - name: Assert installation-id output is non-empty
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        env:
+          INSTALLATION_ID: ${{ steps.action.outputs.installation-id }}
+        run: |
+          echo "installation-id: $INSTALLATION_ID"
+          if [ -z "$INSTALLATION_ID" ]; then
+            echo "FAIL: expected a non-empty installation-id"
+            exit 1
+          fi
+          echo "PASS: installation-id is non-empty"
+
+      - name: Assert app-slug output is non-empty
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        env:
+          APP_SLUG: ${{ steps.action.outputs.app-slug }}
+        run: |
+          echo "app-slug: $APP_SLUG"
+          if [ -z "$APP_SLUG" ]; then
+            echo "FAIL: expected a non-empty app-slug"
+            exit 1
+          fi
+          echo "PASS: app-slug is non-empty"
+
+      - name: Skip notice
+        if: steps.check-secrets.outputs.SKIP == 'true'
+        run: echo "Test skipped - APP_ID and APP_PRIVATE_KEY secrets not configured"

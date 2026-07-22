@@ -1,4 +1,4 @@
-name: Test skip-token-revoke input
+name: Test with specific repositories
 on:
   workflow_dispatch:
 jobs:
@@ -26,7 +26,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          skip-token-revoke: "true"
+          repositories: ${{ github.event.repository.name }}
 
       - name: Assert token output is non-empty
         if: steps.check-secrets.outputs.SKIP == 'false'

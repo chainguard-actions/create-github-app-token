@@ -1,47 +1,69 @@
-name: Test deprecated inputs (app_id and private_key)
+name: Test deprecated underscore inputs (app_id, private_key)
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REPOSITORY: test-owner/test-repo
-      GITHUB_REPOSITORY_OWNER: test-owner
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action with deprecated app_id and private_key inputs (expect failure at API level)
-        id: action
+      - name: Check if secrets are available
+        id: check-secrets
+        env:
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            echo "SKIP=true" >> "$GITHUB_OUTPUT"
+            echo "Secrets not available, skipping test"
+          else
+            echo "SKIP=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Test that the deprecated app_id and private_key inputs still work
+      - id: action
+        if: steps.check-secrets.outputs.SKIP == 'false'
         uses: .
         with:
-          app_id: "99999"
-          private_key: |
-            -----BEGIN RSA PRIVATE KEY-----
-            MIIEowIBAAKCAQEA2a2rwplBQLzHPZe5TNJT5sGMdB7GBqFGBOBiHDCMDQSzFfMr
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            FAKE0000000000000000000000000000000000000000000000000000000000000
-            -----END RSA PRIVATE KEY-----
-          owner: test-owner
-        continue-on-error: true
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Assert action failed at API level (not input validation - deprecated inputs were accepted)
+      - name: Assert token output is non-empty
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        env:
+          TOKEN: ${{ steps.action.outputs.token }}
         run: |
-          echo "outcome: ${{ steps.action.outcome }}"
-          if [ "${{ steps.action.outcome }}" != "failure" ]; then
-            echo "FAIL: expected action to fail with invalid credentials"
+          echo "token length: ${#TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "FAIL: expected a non-empty token using deprecated inputs"
             exit 1
           fi
-          echo "PASS: deprecated inputs were accepted and action failed at API level as expected"
+          echo "PASS: token is non-empty using deprecated app_id/private_key inputs"
+
+      - name: Assert installation-id output is non-empty
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        env:
+          INSTALLATION_ID: ${{ steps.action.outputs.installation-id }}
+        run: |
+          echo "installation-id: $INSTALLATION_ID"
+          if [ -z "$INSTALLATION_ID" ]; then
+            echo "FAIL: expected a non-empty installation-id"
+            exit 1
+          fi
+          echo "PASS: installation-id is non-empty"
+
+      - name: Assert app-slug output is non-empty
+        if: steps.check-secrets.outputs.SKIP == 'false'
+        env:
+          APP_SLUG: ${{ steps.action.outputs.app-slug }}
+        run: |
+          echo "app-slug: $APP_SLUG"
+          if [ -z "$APP_SLUG" ]; then
+            echo "FAIL: expected a non-empty app-slug"
+            exit 1
+          fi
+          echo "PASS: app-slug is non-empty"
+
+      - name: Skip notice
+        if: steps.check-secrets.outputs.SKIP == 'true'
+        run: echo "Test skipped - APP_ID and APP_PRIVATE_KEY secrets not configured"

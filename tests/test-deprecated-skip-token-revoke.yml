@@ -1,4 +1,4 @@
-name: Test skip-token-revoke input
+name: Test deprecated skip_token_revoke input
 on:
   workflow_dispatch:
 jobs:
@@ -20,13 +20,14 @@ jobs:
             echo "SKIP=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Test using the deprecated skip_token_revoke input (underscore variant)
       - id: action
         if: steps.check-secrets.outputs.SKIP == 'false'
         uses: .
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          skip-token-revoke: "true"
+          skip_token_revoke: "true"
 
       - name: Assert token output is non-empty
         if: steps.check-secrets.outputs.SKIP == 'false'
@@ -38,7 +39,7 @@ jobs:
             echo "FAIL: expected a non-empty token"
             exit 1
           fi
-          echo "PASS: token is non-empty"
+          echo "PASS: token is non-empty with deprecated skip_token_revoke input"
 
       - name: Assert installation-id output is non-empty
         if: steps.check-secrets.outputs.SKIP == 'false'

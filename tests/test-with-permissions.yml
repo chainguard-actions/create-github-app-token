@@ -1,4 +1,4 @@
-name: Test skip-token-revoke input
+name: Test with specific permissions
 on:
   workflow_dispatch:
 jobs:
@@ -20,13 +20,14 @@ jobs:
             echo "SKIP=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Create a token with only read access to contents
       - id: action
         if: steps.check-secrets.outputs.SKIP == 'false'
         uses: .
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          skip-token-revoke: "true"
+          permission-contents: read
 
       - name: Assert token output is non-empty
         if: steps.check-secrets.outputs.SKIP == 'false'
@@ -35,10 +36,10 @@ jobs:
         run: |
           echo "token length: ${#TOKEN}"
           if [ -z "$TOKEN" ]; then
-            echo "FAIL: expected a non-empty token"
+            echo "FAIL: expected a non-empty token with restricted permissions"
             exit 1
           fi
-          echo "PASS: token is non-empty"
+          echo "PASS: token is non-empty with permission-contents=read"
 
       - name: Assert installation-id output is non-empty
         if: steps.check-secrets.outputs.SKIP == 'false'
