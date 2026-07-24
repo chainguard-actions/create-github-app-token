@@ -1,0 +1,85 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - run: npm ci
+      - run: npm test
+
+  end-to-end:
+    name: end-to-end
+    runs-on: ubuntu-latest
+    # do not run from forks, as forks don't have access to repository secrets
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.event.pull_request.base.repo.owner.login
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+      - run: npm ci
+      - run: npm run build
+      - uses: ./ # Uses the action in the root directory
+        id: test
+        with:
+          app-id: ${{ vars.TEST_APP_ID }}
+          private-key: ${{ secrets.TEST_APP_PRIVATE_KEY }}
+      - uses: octokit/request-action@02f5e7c637a73a3b12ed81015fa7fb5f11cc5d7d # v2.x
+        id: get-repository
+        env:
+          GITHUB_TOKEN: ${{ steps.test.outputs.token }}
+        with:
+          route: GET /installation/repositories
+      - env:
+          REPOSITORY_DATA: ${{ steps.get-repository.outputs.data }}
+        run: echo "$REPOSITORY_DATA"
+
+  end-to-end-proxy:
+    name: end-to-end with unreachable proxy
+    runs-on: ubuntu-latest
+    # do not run from forks, as forks don't have access to repository secrets
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.event.pull_request.base.repo.owner.login
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - uses: ./ # Uses the action in the root directory
+        continue-on-error: true
+        id: test
+        env:
+          NODE_USE_ENV_PROXY: "1"
+          https_proxy: http://127.0.0.1:9
+        with:
+          app-id: ${{ vars.TEST_APP_ID }}
+          private-key: ${{ secrets.TEST_APP_PRIVATE_KEY }}
+      - name: Assert action failed through unreachable proxy
+        env:
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+        run: test "$TEST_OUTCOME" = "failure"

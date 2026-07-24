@@ -1,0 +1,44 @@
+name: Update Permission Inputs
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-permission-inputs:
+    runs-on: ubuntu-latest
+    env:
+      COMMIT_MESSAGE: 'feat: update permission inputs'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run permission inputs update script
+        run: node scripts/update-permission-inputs.js
+      - name: Commit changes
+        id: auto-commit
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
+        with:
+          commit_message: ${{ env.COMMIT_MESSAGE }}
+      - name: Update PR title
+        if: github.event_name == 'pull_request' && steps.auto-commit.outputs.changes_detected == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ env.COMMIT_MESSAGE }}
+        run: |
+          gh pr edit "$PR_NUMBER" --title "$PR_TITLE"

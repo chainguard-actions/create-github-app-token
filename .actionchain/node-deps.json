@@ -1,0 +1,13 @@
+{
+  "status": "self_contained",
+  "entries": [
+    {
+      "path": "dist/main.cjs",
+      "status": "self_contained"
+    },
+    {
+      "path": "dist/post.cjs",
+      "status": "self_contained"
+    }
+  ]
+}

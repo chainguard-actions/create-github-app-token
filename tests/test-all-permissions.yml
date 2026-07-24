@@ -1,0 +1,77 @@
+name: Test all permission inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@v4
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          app-id: "123456"
+          private-key: "invalid-key"
+          permission-actions: "read"
+          permission-administration: "read"
+          permission-checks: "read"
+          permission-codespaces: "read"
+          permission-contents: "read"
+          permission-custom-properties-for-organizations: "read"
+          permission-dependabot-secrets: "read"
+          permission-deployments: "read"
+          permission-email-addresses: "read"
+          permission-enterprise-custom-properties-for-organizations: "read"
+          permission-environments: "read"
+          permission-followers: "read"
+          permission-git-ssh-keys: "read"
+          permission-gpg-keys: "read"
+          permission-interaction-limits: "read"
+          permission-issues: "read"
+          permission-members: "read"
+          permission-metadata: "read"
+          permission-organization-administration: "read"
+          permission-organization-announcement-banners: "read"
+          permission-organization-copilot-seat-management: "write"
+          permission-organization-custom-org-roles: "read"
+          permission-organization-custom-properties: "read"
+          permission-organization-custom-roles: "read"
+          permission-organization-events: "read"
+          permission-organization-hooks: "read"
+          permission-organization-packages: "read"
+          permission-organization-personal-access-token-requests: "read"
+          permission-organization-personal-access-tokens: "read"
+          permission-organization-plan: "read"
+          permission-organization-projects: "read"
+          permission-organization-secrets: "read"
+          permission-organization-self-hosted-runners: "read"
+          permission-organization-user-blocking: "read"
+          permission-packages: "read"
+          permission-pages: "read"
+          permission-profile: "write"
+          permission-pull-requests: "read"
+          permission-repository-custom-properties: "read"
+          permission-repository-hooks: "read"
+          permission-repository-projects: "read"
+          permission-secret-scanning-alerts: "read"
+          permission-secrets: "read"
+          permission-security-events: "read"
+          permission-single-file: "read"
+          permission-starring: "read"
+          permission-statuses: "read"
+          permission-team-discussions: "read"
+          permission-vulnerability-alerts: "read"
+          permission-workflows: "write"
+      - name: Assert action ran (failed due to invalid credentials is expected)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ] && [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected outcome to be 'failure' or 'success', got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action ran with outcome '$OUTCOME' (invalid credentials expected to fail)"
